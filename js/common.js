@@ -2,7 +2,7 @@
 // База: Firebase Realtime Database через REST, всё лежит в ветке kvest5/.
 const DB_URL = 'https://anime-database-7d48e-default-rtdb.europe-west1.firebasedatabase.app';
 const ROOT = 'kvest5';
-const TEAM_COLORS = ['#f472b6', '#60a5fa', '#34d399', '#fbbf24'];
+const TEAM_COLORS = ['#f472b6', '#60a5fa', '#34d399', '#fbbf24', '#a78bfa', '#f87171', '#22d3ee', '#fb923c', '#a3e635', '#e879f9'];
 const LETTERS = 'АБВГДЕЖЗ';
 
 const api = {

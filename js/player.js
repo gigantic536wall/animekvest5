@@ -71,6 +71,14 @@ function initJoin() {
     if (playersOf(tree, team).length >= quiz.maxPerTeam) return toast('В этой команде уже нет мест');
     const id = me?.id || 'p' + Math.random().toString(36).slice(2, 10);
     await api.put(`players/${id}`, { name, team, joined: { '.sv': 'timestamp' } });
+    // Если в последний момент в команду вошли одновременно с нами — лишний тот, кто вошёл позже.
+    const mates = Object.entries((await api.get('players')) || {})
+      .filter(([, p]) => p.team === team)
+      .sort(([a, x], [b, y]) => x.joined - y.joined || a.localeCompare(b));
+    if (mates.findIndex(([pid]) => pid === id) >= quiz.maxPerTeam) {
+      await api.del(`players/${id}`);
+      return toast('Пока вы входили, команду заполнили — выберите другую');
+    }
     saveMe({ id, name, team });
     screenKey = '';
     update();
@@ -85,7 +93,7 @@ function lobbyHtml() {
       <h2>Ждём начала игры</h2>
       <p>Вы в команде <b style="color:${TEAM_COLORS[me.team]}">${esc(teamName(tree, quiz, me.team))}</b></p>
       <p class="muted">Состав: ${mates}</p>
-      <p class="small muted">Отвечает команда целиком: принимается первый ответ любого из вас, после этого поле блокируется у обоих.</p>
+      <p class="small muted">Отвечает команда целиком: принимается первый ответ любого из вас, после этого поле блокируется у всей команды.</p>
     </div>
     <div class="card"><h3>Команды</h3>${boardHtml(tree, quiz, computeScores(tree, quiz))}</div>`;
 }

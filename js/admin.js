@@ -170,9 +170,10 @@ function checkHtml() {
     const mark = tree.marks?.[`r${view.r}`]?.[`q${view.q}`]?.[`t${t}`];
     const bet = tree.bets?.[`q${view.q}`]?.[`t${t}`]?.bet;
     const pts = scoreAnswer(r, q, ans, mark, bet);
+    const v = verdict(r, q, ans, mark);
     return `<tr>
-      <td><span class="dot" style="background:${TEAM_COLORS[t]}"></span> ${esc(teamName(tree, quiz, t))}</td>
-      <td>${ans ? `<b>${esc(answerText(r, q, ans))}</b><div class="small muted">${esc(ans.name)}</div>` : '<span class="muted">нет ответа</span>'}</td>
+      <td>${avatarHtml(tree, t, 26)} ${esc(teamName(tree, quiz, t))}</td>
+      <td class="v-${v === 'none' ? 'pending' : v}">${ans ? `<b>${esc(answerText(r, q, ans))}</b><div class="small muted">${esc(ans.name)}</div>` : '<span class="muted">нет ответа</span>'}</td>
       <td class="small">${esc(stageText(r, ans))}</td>
       <td>${markButtons(r, q, t, ans, mark, bet)}</td>
       <td class="num"><span class="pts ${pts > 0 ? 'pos' : pts < 0 ? 'neg' : ''}">${pts > 0 ? '+' : ''}${pts}</span></td>
@@ -193,12 +194,14 @@ function teamsHtml() {
   const scores = computeScores(tree, quiz);
   return quiz.teams.map((_, t) => `
     <div style="margin-bottom:12px">
-      <div class="row"><span class="dot" style="background:${TEAM_COLORS[t]}"></span>
-        <input style="padding:6px 10px;width:150px" data-tname="${t}" value="${esc(teamName(tree, quiz, t))}">
+      <div class="row">
+        <label class="btn-file" title="Загрузить аватарку">${avatarHtml(tree, t, 34)}<input type="file" accept="image/*" hidden data-ava="${t}"></label>
+        <input style="padding:6px 10px;width:140px" data-tname="${t}" value="${esc(teamName(tree, quiz, t))}">
         <b class="total grow" style="text-align:right">${scores.totals[t]}</b>
         <button class="sm" data-adj="${t}" data-d="1" title="Ручная правка">+1</button><button class="sm" data-adj="${t}" data-d="-1" title="Ручная правка">−1</button></div>
       <div class="small muted">${playersOf(tree, t).map((p) => `${esc(p.name)} <button class="sm" data-kick="${p.id}" title="Удалить игрока">✕</button>`).join(' ') || 'нет игроков'}
-        ${tree.adjust?.[t] ? `<span class="tag">ручная правка ${tree.adjust[t] > 0 ? '+' : ''}${tree.adjust[t]}</span>` : ''}</div>
+        ${tree.adjust?.[t] ? `<span class="tag">ручная правка ${tree.adjust[t] > 0 ? '+' : ''}${tree.adjust[t]}</span>` : ''}
+        ${tree.teams?.[t]?.avatar ? `<button class="sm" data-avadel="${t}">убрать аватарку</button>` : ''}</div>
     </div>`).join('');
 }
 
@@ -207,7 +210,7 @@ function scoresHtml() {
   const teams = activeTeams(tree, quiz, scores);
   if (!teams.length) return '<p class="muted">Пока нет команд</p>';
   return `<div style="overflow-x:auto"><table><tr><th>Команда</th>${quiz.rounds.map((_, i) => `<th class="num">${i + 1}</th>`).join('')}<th class="num">Итого</th></tr>
-    ${teams.sort((a, b) => scores.totals[b] - scores.totals[a]).map((t) => `<tr><td>${esc(teamName(tree, quiz, t))}</td>
+    ${teams.sort((a, b) => scores.totals[b] - scores.totals[a]).map((t) => `<tr><td style="white-space:nowrap">${avatarHtml(tree, t, 24)} ${esc(teamName(tree, quiz, t))}</td>
       ${scores.byRound[t].map((v) => `<td class="num">${v}</td>`).join('')}<td class="num total">${scores.totals[t]}</td></tr>`).join('')}
   </table></div>`;
 }
@@ -297,6 +300,7 @@ function bind() {
         await api.put(`adjust/${t}`, Number(tree.adjust?.[t] || 0) + Number(b.dataset.d));
       }
       if (b.dataset.kick && confirm('Удалить игрока из игры?')) await api.del(`players/${b.dataset.kick}`);
+      if (b.dataset.avadel !== undefined) await api.del(`teams/${b.dataset.avadel}/avatar`);
     } catch (err) {
       alert('Ошибка связи с базой: ' + err.message);
     }
@@ -305,6 +309,13 @@ function bind() {
     if (e.target.id === 'checkRound') { view.r = +e.target.value; view.q = 0; view.follow = false; renderAll(); }
     if (e.target.id === 'follow') { view.follow = e.target.checked; renderAll(); }
     if (e.target.dataset.tname !== undefined) await api.put(`teams/${e.target.dataset.tname}/name`, e.target.value.trim() || null);
+    if (e.target.dataset.ava !== undefined && e.target.files?.[0]) {
+      try {
+        await api.put(`teams/${e.target.dataset.ava}/avatar`, await compressAvatar(e.target.files[0]));
+      } catch (err) {
+        alert('Не получилось загрузить картинку: ' + err.message);
+      }
+    }
   });
 }
 

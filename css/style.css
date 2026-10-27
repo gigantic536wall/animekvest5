@@ -182,7 +182,70 @@ label { display: block; font-size: 14px; color: var(--muted); margin: 8px 0 4px;
 .bets button { width: 62px; height: 62px; font-size: 26px; font-weight: 900; }
 .topic { font-size: 30px; font-weight: 900; text-align: center; margin: 14px 0; }
 
+/* ---------- Аватарки команд ---------- */
+.ava {
+  flex: none; display: inline-grid; place-items: center; border-radius: 50%;
+  object-fit: cover; border: 2px solid var(--c); background: #1e1b4b;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.25), 0 0 14px color-mix(in srgb, var(--c) 45%, transparent);
+  vertical-align: middle;
+}
+.ava-empty { color: #fff; font-weight: 900; background: radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--c) 85%, #fff), var(--c) 55%, color-mix(in srgb, var(--c) 50%, #000)); }
+.ava-edit { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.btn-file { display: inline-block; margin: 0 6px 0 0; cursor: pointer; }
+.primary-btn {
+  display: inline-block; padding: 8px 14px; border-radius: 12px; font-size: 15px; font-weight: 700; color: #fff;
+  background: linear-gradient(90deg, #7c3aed, #db2777);
+}
+.team .ava { margin-right: 4px; }
+
 /* ---------- Табло ---------- */
+.lb { display: grid; gap: 8px; }
+.lb-row {
+  display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 16px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--c) 16%, transparent), rgba(255, 255, 255, 0.03));
+  border: 1px solid color-mix(in srgb, var(--c) 35%, transparent);
+  animation: slide 0.4s ease-out both;
+}
+.lb-row.top1 { border-color: #fbbf24; box-shadow: 0 0 18px rgba(251, 191, 36, 0.25); }
+.lb-place { width: 32px; text-align: center; font-size: 22px; font-weight: 900; color: var(--muted); }
+.lb-info { flex: 1; min-width: 0; }
+.lb-name { font-weight: 800; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-members { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-bar { height: 5px; border-radius: 5px; background: rgba(255, 255, 255, 0.08); margin-top: 6px; overflow: hidden; }
+.lb-bar > div { height: 100%; background: var(--c); border-radius: 5px; transition: width 0.6s ease; }
+.lb-score { font-size: 30px; font-weight: 900; text-align: right; line-height: 1; font-variant-numeric: tabular-nums; }
+.lb-score span { display: block; font-size: 12px; font-weight: 600; color: var(--muted); }
+
+.podium { display: grid; grid-template-columns: 1fr 1.15fr 1fr; align-items: end; gap: 10px; margin-bottom: 16px; text-align: center; }
+.pod { display: flex; flex-direction: column; align-items: center; gap: 6px; animation: rise 0.6s ease-out both; min-width: 0; }
+.pod-medal { font-size: 30px; line-height: 1; }
+.pod1 .pod-medal { font-size: 40px; }
+.pod-name { font-weight: 800; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pod-score { font-size: 28px; font-weight: 900; }
+.pod1 .pod-score { font-size: 36px; color: #fde68a; }
+.pod-step {
+  width: 100%; border-radius: 14px 14px 4px 4px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 55%, transparent), color-mix(in srgb, var(--c) 12%, transparent));
+  border: 1px solid color-mix(in srgb, var(--c) 60%, transparent);
+}
+.pod1 .pod-step { height: 110px; }
+.pod2 .pod-step { height: 75px; }
+.pod3 .pod-step { height: 50px; }
+.overlay .card.board-card { width: min(720px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; }
+@keyframes slide { from { transform: translateX(-12px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes rise { from { transform: translateY(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---------- Подсветка проверенного ответа ---------- */
+.v-ok { background: rgba(52, 211, 153, 0.16) !important; border-color: rgba(52, 211, 153, 0.75) !important; box-shadow: 0 0 16px rgba(52, 211, 153, 0.25); }
+.v-partial { background: rgba(251, 191, 36, 0.16) !important; border-color: rgba(251, 191, 36, 0.8) !important; box-shadow: 0 0 16px rgba(251, 191, 36, 0.25); }
+.v-bad { background: rgba(248, 113, 113, 0.16) !important; border-color: rgba(248, 113, 113, 0.8) !important; box-shadow: 0 0 16px rgba(248, 113, 113, 0.25); }
+.v-pending { background: rgba(255, 255, 255, 0.05) !important; border-color: var(--line) !important; }
+.verdict { font-weight: 800; margin-top: 6px; }
+.v-ok .verdict { color: var(--ok); }
+.v-partial .verdict { color: var(--warn); }
+.v-bad .verdict { color: var(--bad); }
+.v-pending .verdict { color: var(--muted); font-weight: 600; }
+td.v-ok, td.v-partial, td.v-bad { border-radius: 10px; }
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
 th { color: var(--muted); font-weight: 600; font-size: 14px; }
@@ -226,4 +289,10 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   .tile { width: 34px; height: 40px; font-size: 19px; }
   .big { font-size: 36px; }
   .topbar h1 { font-size: 22px; }
+  .lb-row { gap: 8px; padding: 8px 10px; }
+  .lb-score { font-size: 24px; }
+  .lb-name { font-size: 16px; }
+  .podium .ava { width: 56px !important; height: 56px !important; }
+  .pod-score { font-size: 22px; }
+  .pod1 .pod-score { font-size: 28px; }
 }

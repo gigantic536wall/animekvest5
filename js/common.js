@@ -145,6 +145,39 @@ function teamName(tree, quiz, t) {
   return tree?.teams?.[t]?.name || quiz.teams[t] || `Команда ${t + 1}`;
 }
 
+// Аватарка команды: картинка из базы или кружок цвета команды с номером.
+function avatarHtml(tree, t, size = 40) {
+  const src = tree?.teams?.[t]?.avatar;
+  const style = `width:${size}px;height:${size}px;--c:${TEAM_COLORS[t]}`;
+  if (typeof src === 'string' && src.startsWith('data:image/')) {
+    return `<img class="ava" style="${style}" src="${src}" alt="">`;
+  }
+  return `<span class="ava ava-empty" style="${style};font-size:${Math.round(size * 0.42)}px">${t + 1}</span>`;
+}
+
+// Сжимаем загруженную картинку до квадрата size×size (обрезка по центру), JPEG.
+function compressAvatar(file, size = 200) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const side = Math.min(img.naturalWidth, img.naturalHeight);
+      const c = document.createElement('canvas');
+      c.width = c.height = size;
+      c.getContext('2d').drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, size, size);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Не удалось открыть картинку')); };
+    img.src = url;
+  });
+}
+
+// Подпись команд без самих картинок — чтобы дёшево замечать изменения.
+function teamsSig(tree) {
+  return Object.entries(tree?.teams || {}).map(([t, v]) => `${t}:${v?.name || ''}:${(v?.avatar || '').length}`).join('|');
+}
+
 function playersOf(tree, t) {
   return Object.entries(tree?.players || {})
     .filter(([, p]) => p.team === t)
@@ -208,6 +241,33 @@ function scoreAnswer(round, q, ans, mark, bet) {
   }
   return 0;
 }
+
+// Итог проверки ответа для подсветки: ok — зелёный, partial — жёлтый, bad — красный, pending — ещё не проверен.
+function verdict(round, q, ans, mark) {
+  if (!ans) return mark?.a === false ? 'bad' : 'none';
+  const m = mark || {};
+  const fromParts = (parts) => {
+    const good = parts.filter(Boolean).length;
+    return good === parts.length ? 'ok' : good ? 'partial' : 'bad';
+  };
+  switch (round.type) {
+    case 'order': return norm(ans.order) === norm(q.answer) ? 'ok' : 'bad';
+    case 'truefalse': return ans.tf === q.answer ? 'ok' : 'bad';
+    case 'odd':
+      if (m.b === undefined) return 'pending';
+      return fromParts([ans.choice === q.correct, m.b]);
+    case 'chat':
+    case 'emblem':
+    case 'anagram':
+      if (m.a === undefined && m.b === undefined) return 'pending';
+      return fromParts([m.a === true, m.b === true]);
+    default:
+      if (m.a === undefined) return 'pending';
+      return m.a ? 'ok' : 'bad';
+  }
+}
+
+const VERDICT_TEXT = { ok: '✅ Верно', partial: '🟡 Частично верно', bad: '❌ Неверно', pending: '⏳ Ждёт проверки', none: '' };
 
 function computeScores(tree, quiz) {
   const totals = {};
@@ -290,16 +350,44 @@ function questionSummary(round, q) {
   return '';
 }
 
-function boardHtml(tree, quiz, scores) {
-  const teams = activeTeams(tree, quiz, scores).sort((a, b) => scores.totals[b] - scores.totals[a]);
+// Табло: места (одинаковые очки — одно место), аватарки, полоска очков. podium — пьедестал для топ-3.
+function boardHtml(tree, quiz, scores, opts = {}) {
+  const teams = activeTeams(tree, quiz, scores).sort((a, b) => scores.totals[b] - scores.totals[a] || a - b);
   if (!teams.length) return '<p class="muted">Пока нет команд</p>';
-  return `<table class="board">${teams.map((t, i) => `
-    <tr>
-      <td>${i + 1}</td>
-      <td><span class="dot" style="background:${TEAM_COLORS[t]}"></span> ${esc(teamName(tree, quiz, t))}
-        <div class="small muted">${playersOf(tree, t).map((p) => esc(p.name)).join(', ')}</div></td>
-      <td class="num total">${scores.totals[t]}</td>
-    </tr>`).join('')}</table>`;
+  const place = {};
+  teams.forEach((t, i) => (place[t] = i && scores.totals[t] === scores.totals[teams[i - 1]] ? place[teams[i - 1]] : i + 1));
+  const max = Math.max(1, ...teams.map((t) => scores.totals[t]));
+  const medal = (p) => ['🥇', '🥈', '🥉'][p - 1] || p;
+  const members = (t) => playersOf(tree, t).map((p) => esc(p.name)).join(', ');
+  const word = (n) => ['очко', 'очка', 'очков'][n % 10 === 1 && n % 100 !== 11 ? 0 : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 1 : 2];
+
+  let podium = '';
+  let rest = teams;
+  if (opts.podium && teams.length >= 3) {
+    rest = teams.slice(3);
+    podium = `<div class="podium">${[1, 0, 2].map((i) => {
+      const t = teams[i];
+      return `<div class="pod pod${i + 1}" style="--c:${TEAM_COLORS[t]};animation-delay:${0.15 * (3 - i)}s">
+        <div class="pod-medal">${medal(place[t])}</div>
+        ${avatarHtml(tree, t, i === 0 ? 96 : 72)}
+        <div class="pod-name">${esc(teamName(tree, quiz, t))}</div>
+        <div class="lb-members" style="max-width:100%">${members(t) || '&nbsp;'}</div>
+        <div class="pod-score">${scores.totals[t]}</div>
+        <div class="pod-step"></div>
+      </div>`;
+    }).join('')}</div>`;
+  }
+  return `${podium}<div class="lb">${rest.map((t, i) => `
+    <div class="lb-row ${place[t] <= 3 ? 'top' + place[t] : ''}" style="--c:${TEAM_COLORS[t]};animation-delay:${0.05 * i}s">
+      <div class="lb-place">${medal(place[t])}</div>
+      ${avatarHtml(tree, t, 48)}
+      <div class="lb-info">
+        <div class="lb-name">${esc(teamName(tree, quiz, t))}</div>
+        <div class="lb-members">${members(t) || '&nbsp;'}</div>
+        <div class="lb-bar"><div style="width:${Math.max(0, (scores.totals[t] / max) * 100)}%"></div></div>
+      </div>
+      <div class="lb-score">${scores.totals[t]}<span>${word(Math.abs(scores.totals[t]))}</span></div>
+    </div>`).join('')}</div>`;
 }
 
 function fmtTime(ms) {

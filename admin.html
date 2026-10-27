@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Админка — Аниме квест 5.2</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="wrap" id="login">
+    <div class="card" style="max-width:380px;margin:60px auto">
+      <h2 class="logo">Админка</h2>
+      <label>Пароль</label>
+      <input type="password" id="pwd" autocomplete="current-password">
+      <p><button class="primary" id="enter">Войти</button> <span id="err" style="color:var(--bad)"></span></p>
+    </div>
+  </div>
+
+  <div class="wrap wide hidden" id="app">
+    <div class="topbar">
+      <h1 class="logo" style="margin:0">Аниме квест 5.2 — ведущий</h1>
+      <div class="row"><a class="small muted" href="./" target="_blank">экран игрока ↗</a><span class="dot status-offline" id="conn"></span></div>
+    </div>
+    <div class="admin-grid">
+      <div>
+        <div class="card" id="controls"></div>
+        <div class="card"><h3>Задания</h3><div id="rounds"></div></div>
+        <div class="card"><h3>Команды и очки</h3><div id="teams"></div></div>
+        <div class="card">
+          <h3>Сброс</h3>
+          <div class="row">
+            <button class="sm bad" data-act="resetAnswers">Очистить ответы и очки</button>
+            <button class="sm bad" data-act="resetAll">Полный сброс</button>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card"><h3>Текущий вопрос</h3><div id="preview"></div></div>
+        <div class="card"><h3>Проверка ответов</h3><div id="check"></div></div>
+        <div class="card"><h3>Табло по заданиям</h3><div id="scores"></div></div>
+      </div>
+    </div>
+  </div>
+  <script src="js/common.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

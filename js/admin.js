@@ -160,25 +160,54 @@ function markButtons(r, q, t, ans, mark, bet) {
   return '';
 }
 
+// Ответ проверен полностью: в двухчастных заданиях — обе части, в «Лишнем» — причина.
+function isChecked(r, mark) {
+  const m = mark || {};
+  if (r.type === 'order' || r.type === 'truefalse') return true;
+  if (r.type === 'odd') return m.b !== undefined;
+  if (r.type === 'chat' || r.type === 'emblem' || r.type === 'anagram') return m.a !== undefined && m.b !== undefined;
+  return m.a !== undefined;
+}
+
+const reopened = new Set(); // проверенные ответы, у которых ведущий снова открыл кнопки
+
 function checkHtml() {
   const r = quiz.rounds[view.r];
   const q = r.questions[view.q];
   const scores = computeScores(tree, quiz);
   const teams = activeTeams(tree, quiz, scores);
-  const rows = teams.map((t) => {
-    const ans = tree.answers?.[`r${view.r}`]?.[`q${view.q}`]?.[`t${t}`];
+  const answers = tree.answers?.[`r${view.r}`]?.[`q${view.q}`] || {};
+  const answered = teams.filter((t) => answers[`t${t}`]);
+  const silent = teams.filter((t) => !answers[`t${t}`]);
+  let checked = 0;
+  const rows = answered.map((t) => {
+    const ans = answers[`t${t}`];
     const mark = tree.marks?.[`r${view.r}`]?.[`q${view.q}`]?.[`t${t}`];
     const bet = tree.bets?.[`q${view.q}`]?.[`t${t}`]?.bet;
     const pts = scoreAnswer(r, q, ans, mark, bet);
     const v = verdict(r, q, ans, mark);
+    const key = `${view.r}|${view.q}|${t}`;
+    const done = isChecked(r, mark);
+    if (done) checked++;
+    const control = done && !reopened.has(key)
+      ? `<span class="verdict-badge v-${v}">${VERDICT_TEXT[v]}</span>${r.type === 'order' || r.type === 'truefalse' ? '' : ` <button class="sm" data-reopen="${key}">изменить</button>`}`
+      : markButtons(r, q, t, ans, mark, bet) + (done ? ` <button class="sm" data-reclose="${key}">готово</button>` : '');
     return `<tr>
       <td>${avatarHtml(tree, t, 26)} ${esc(teamName(tree, quiz, t))}</td>
-      <td class="v-${v === 'none' ? 'pending' : v}">${ans ? `<b>${esc(answerText(r, q, ans))}</b><div class="small muted">${esc(ans.name)}</div>` : '<span class="muted">нет ответа</span>'}</td>
+      <td class="v-${v}">${`<b>${esc(answerText(r, q, ans))}</b><div class="small muted">${esc(ans.name)}</div>`}</td>
       <td class="small">${esc(stageText(r, ans))}</td>
-      <td>${markButtons(r, q, t, ans, mark, bet)}</td>
+      <td>${control}</td>
       <td class="num"><span class="pts ${pts > 0 ? 'pos' : pts < 0 ? 'neg' : ''}">${pts > 0 ? '+' : ''}${pts}</span></td>
     </tr>`;
   });
+  // Кто не ответил — одной строкой; в финале им сразу пишется минус ставка.
+  const silentLine = silent.length
+    ? `<p class="small muted" style="margin-top:10px">Не ответили: ${silent.map((t) => {
+        const mark = tree.marks?.[`r${view.r}`]?.[`q${view.q}`]?.[`t${t}`];
+        const pts = scoreAnswer(r, q, null, mark, tree.bets?.[`q${view.q}`]?.[`t${t}`]?.bet);
+        return `${avatarHtml(tree, t, 18)} ${esc(teamName(tree, quiz, t))}${pts ? ` <span class="pts neg">${pts}</span>` : ''}`;
+      }).join(', ')}</p>`
+    : '';
   return `
     <div class="row" style="margin-bottom:8px">
       <select id="checkRound">${quiz.rounds.map((x, i) => `<option value="${i}" ${i === view.r ? 'selected' : ''}>${i + 1}. ${esc(x.title)}</option>`).join('')}</select>
@@ -187,7 +216,11 @@ function checkHtml() {
     </div>
     <p><b>${esc(questionSummary(r, q))}</b></p>
     <p class="answer-key small">✅ ${esc(correctText(r, q))}</p>
-    ${rows.length ? `<table class="check"><tr><th>Команда</th><th>Ответ</th><th>Этап</th><th>Проверка</th><th class="num">Очки</th></tr>${rows.join('')}</table>` : '<p class="muted">Нет команд</p>'}`;
+    ${rows.length
+      ? `<p class="small muted">Проверено ${checked} из ${rows.length}</p>
+         <table class="check"><tr><th>Команда</th><th>Ответ</th><th>Этап</th><th>Проверка</th><th class="num">Очки</th></tr>${rows.join('')}</table>`
+      : `<p class="muted">${teams.length ? 'Пока никто не ответил' : 'Нет команд'}</p>`}
+    ${silentLine}`;
 }
 
 function teamsHtml() {
@@ -301,6 +334,8 @@ function bind() {
       }
       if (b.dataset.kick && confirm('Удалить игрока из игры?')) await api.del(`players/${b.dataset.kick}`);
       if (b.dataset.avadel !== undefined) await api.del(`teams/${b.dataset.avadel}/avatar`);
+      if (b.dataset.reopen) { reopened.add(b.dataset.reopen); renderAll(); }
+      if (b.dataset.reclose) { reopened.delete(b.dataset.reclose); renderAll(); }
     } catch (err) {
       alert('Ошибка связи с базой: ' + err.message);
     }

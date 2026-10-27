@@ -246,6 +246,7 @@ label { display: block; font-size: 14px; color: var(--muted); margin: 8px 0 4px;
 .v-bad .verdict { color: var(--bad); }
 .v-pending .verdict { color: var(--muted); font-weight: 600; }
 td.v-ok, td.v-partial, td.v-bad { border-radius: 10px; }
+.verdict-badge { display: inline-block; padding: 4px 10px; border-radius: 9px; border: 1px solid var(--line); font-size: 14px; font-weight: 700; }
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
 th { color: var(--muted); font-weight: 600; font-size: 14px; }

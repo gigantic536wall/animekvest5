@@ -46,7 +46,7 @@ function joinHtml() {
       <label>Команда (по ${quiz.maxPerTeam} человека)</label>
       <div class="teams">${quiz.teams.map((_, t) => `
         <button class="team ${sel === t ? 'sel' : ''}" data-team="${t}" ${counts[t] >= quiz.maxPerTeam ? 'disabled' : ''}>
-          <b><span class="dot" style="background:${TEAM_COLORS[t]}"></span> ${esc(teamName(tree, quiz, t))}</b>
+          <b>${avatarHtml(tree, t, 28)} ${esc(teamName(tree, quiz, t))}</b>
           <span class="small muted">${counts[t]}/${quiz.maxPerTeam}: ${playersOf(tree, t).map((p) => esc(p.name)).join(', ') || 'пусто'}</span>
         </button>`).join('')}
       </div>
@@ -88,6 +88,7 @@ function initJoin() {
 // ---------- Ожидание ----------
 function lobbyHtml() {
   const mates = playersOf(tree, me.team).map((p) => esc(p.name)).join(', ');
+  const hasAva = !!tree.teams?.[me.team]?.avatar;
   return `
     <div class="card center">
       <h2>Ждём начала игры</h2>
@@ -95,7 +96,32 @@ function lobbyHtml() {
       <p class="muted">Состав: ${mates}</p>
       <p class="small muted">Отвечает команда целиком: принимается первый ответ любого из вас, после этого поле блокируется у всей команды.</p>
     </div>
+    <div class="card">
+      <h3>Аватарка команды</h3>
+      <div class="ava-edit">
+        ${avatarHtml(tree, me.team, 84)}
+        <div>
+          <label class="btn-file"><input type="file" id="avaFile" accept="image/*" hidden><span class="primary-btn">📷 ${hasAva ? 'Сменить' : 'Загрузить'} картинку</span></label>
+          ${hasAva ? '<button class="sm" id="avaDel">Убрать</button>' : ''}
+          <div class="small muted" style="margin-top:6px">Любой из команды может поставить картинку — её увидят все в табло.</div>
+        </div>
+      </div>
+    </div>
     <div class="card"><h3>Команды</h3>${boardHtml(tree, quiz, computeScores(tree, quiz))}</div>`;
+}
+
+function initLobby() {
+  $('#avaFile')?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      await api.put(`teams/${me.team}/avatar`, await compressAvatar(file));
+      toast('Аватарка обновлена');
+    } catch (err) {
+      toast('Не получилось загрузить картинку');
+    }
+  });
+  $('#avaDel')?.addEventListener('click', () => api.del(`teams/${me.team}/avatar`).catch(() => toast('Ошибка связи')));
 }
 
 function introHtml() {
@@ -119,32 +145,58 @@ function roundEndHtml() {
       <h2>«${esc(r.title)}» — раунд завершён</h2>
       <p class="muted">Ждём ведущего</p>
     </div>
-    <div class="card"><h3>Табло</h3>${boardHtml(tree, quiz, computeScores(tree, quiz))}</div>`;
+    <div class="card"><h2 class="center">🏆 Табло</h2>${boardHtml(tree, quiz, computeScores(tree, quiz), { podium: true })}</div>`;
+}
+
+// Ответ команды в рамке цвета проверки: зелёный — верно, жёлтый — частично, красный — неверно.
+function myVerdict(r = st().round, qi = st().q) {
+  const round = quiz.rounds[r];
+  const q = round.questions[qi];
+  const ans = teamAnswer(r, qi);
+  const mark = tree.marks?.[`r${r}`]?.[`q${qi}`]?.[`t${me.team}`];
+  const pts = scoreAnswer(round, q, ans, mark, tree.bets?.[`q${qi}`]?.[`t${me.team}`]?.bet);
+  return { v: verdict(round, q, ans, mark), pts };
+}
+
+function verdictLine({ v, pts }) {
+  if (v === 'none' || !VERDICT_TEXT[v]) return '';
+  return `<div class="verdict">${VERDICT_TEXT[v]}${v !== 'pending' ? ` (${pts > 0 ? '+' : ''}${pts})` : ''}</div>`;
 }
 
 function revealHtml() {
   const r = round();
   const qi = st().revealQ || 0;
   const q = r.questions[qi];
-  const ans = teamAnswer(st().round, qi);
-  const mark = tree.marks?.[`r${st().round}`]?.[`q${qi}`]?.[`t${me.team}`];
-  const pts = scoreAnswer(r, q, ans, mark, tree.bets?.[`q${qi}`]?.[`t${me.team}`]?.bet);
+  const answers = tree.answers?.[`r${st().round}`]?.[`q${qi}`] || {};
+  // Ответы всех команд, своя — первой.
+  const teams = activeTeams(tree, quiz, computeScores(tree, quiz)).sort((a, b) => (b === me.team) - (a === me.team));
+  const rows = teams.map((t) => {
+    const ans = answers[`t${t}`];
+    const mark = tree.marks?.[`r${st().round}`]?.[`q${qi}`]?.[`t${t}`];
+    const pts = scoreAnswer(r, q, ans, mark, tree.bets?.[`q${qi}`]?.[`t${t}`]?.bet);
+    const v = verdict(r, q, ans, mark);
+    return `<div class="locked v-${v === 'none' ? 'pending' : v}" style="margin-bottom:8px">
+      <div class="row">${avatarHtml(tree, t, 32)}<b class="grow">${esc(teamName(tree, quiz, t))}${t === me.team ? ' (вы)' : ''}</b>
+        <span class="pts ${pts > 0 ? 'pos' : pts < 0 ? 'neg' : ''}">${pts > 0 ? '+' : ''}${pts}</span></div>
+      <div style="margin-top:4px">${ans ? esc(answerText(r, q, ans)) : '<span class="muted">не ответила</span>'}</div>
+    </div>`;
+  });
   return `
     <div class="card">
       <div class="muted">Ответы: «${esc(r.title)}», вопрос ${qi + 1} из ${r.questions.length}</div>
       <p class="qtext">${esc(questionSummary(r, q))}</p>
       ${q.image ? `<img class="emblem-img" src="${esc(q.image)}" alt="">` : ''}
       <p class="answer-key">✅ ${esc(correctText(r, q))}</p>
-      <p>Ваша команда: ${ans ? esc(answerText(r, q, ans)) : '<span class="muted">не ответила</span>'}
-        <span class="pts ${pts > 0 ? 'pos' : pts < 0 ? 'neg' : ''}">(${pts > 0 ? '+' : ''}${pts})</span></p>
+      ${rows.join('')}
     </div>`;
 }
 
 // ---------- Вопрос ----------
 function lockedHtml(ans) {
   const r = round();
-  return `<div class="locked">✅ Ваша команда ответила: <b>${esc(answerText(r, question(), ans))}</b>
-    <div class="small muted">Ответ отправил(а) ${esc(ans.name)}. Изменить его нельзя.</div></div>`;
+  const mv = myVerdict();
+  return `<div class="locked v-${mv.v}">Ваша команда ответила: <b>${esc(answerText(r, question(), ans))}</b>
+    <div class="small muted">Ответ отправил(а) ${esc(ans.name)}. Изменить его нельзя.</div>${verdictLine(mv)}</div>`;
 }
 
 function headHtml() {
@@ -465,7 +517,7 @@ function pauseHtml() {
     <div class="card center">
       <div class="muted">Задание ${st().round + 1}: ${esc(r.title)}, вопрос ${st().q + 1} из ${r.questions.length}</div>
       <h2>${ans ? 'Ответ принят' : 'Время вышло'}</h2>
-      ${ans ? `<p>Ваша команда: <b>${esc(answerText(r, q, ans))}</b></p>` : '<p class="muted">Ваша команда не ответила</p>'}
+      ${ans ? `<div class="locked v-${myVerdict().v}" style="margin:10px 0">Ваша команда: <b>${esc(answerText(r, q, ans))}</b>${verdictLine(myVerdict())}</div>` : '<p class="muted">Ваша команда не ответила</p>'}
       ${r.type === 'truefalse' ? `<p class="answer-key">${q.answer ? '👍 Правда' : '👎 Ложь'}: ${esc(q.explain)}</p>` : ''}
       <p class="muted">${last ? 'Раунд заканчивается через' : 'Следующий вопрос через'} <b id="pausein">–</b> с</p>
     </div>`;
@@ -474,7 +526,7 @@ function pauseHtml() {
 // ---------- Отрисовка ----------
 function currentKey() {
   if (!loaded) return 'loading';
-  if (!isJoined()) return 'join|' + JSON.stringify(tree.players || {}) + (local.joinTeam ?? '');
+  if (!isJoined()) return 'join|' + JSON.stringify(tree.players || {}) + teamsSig(tree) + (local.joinTeam ?? '');
   const s = st();
   const base = `${s.phase}|${s.round}|${s.q}|${me.team}`;
   switch (s.phase) {
@@ -482,13 +534,18 @@ function currentKey() {
       const r = round();
       const sub = r.type === 'final' ? (elapsed(s) < r.betTime * 1000 ? 'bet' : 'answer') : '';
       const bet = r.type === 'final' ? tree.bets?.[`q${s.q}`]?.[`t${me.team}`]?.bet : '';
-      return `${base}|${sub}|${bet}|${teamAnswer() ? 1 : 0}`;
+      const mv = myVerdict();
+      return `${base}|${sub}|${bet}|${teamAnswer() ? 1 : 0}|${mv.v}${mv.pts}`;
     }
-    case 'pause': return `${base}|${teamAnswer() ? 1 : 0}`;
-    case 'reveal': return `${base}|${s.revealQ}|${JSON.stringify(tree.marks?.[`r${s.round}`] || {})}`;
+    case 'pause': {
+      const mv = myVerdict();
+      return `${base}|${teamAnswer() ? 1 : 0}|${mv.v}${mv.pts}`;
+    }
+    case 'reveal':
+      return `${base}|${s.revealQ}|${JSON.stringify(tree.marks?.[`r${s.round}`] || {})}|${JSON.stringify(tree.answers?.[`r${s.round}`]?.[`q${s.revealQ || 0}`] || {})}|${teamsSig(tree)}`;
     case 'lobby':
     case 'roundEnd':
-      return `${base}|${JSON.stringify(tree.players || {})}|${JSON.stringify(tree.teams || {})}|${JSON.stringify(computeScores(tree, quiz).totals)}`;
+      return `${base}|${JSON.stringify(tree.players || {})}|${teamsSig(tree)}|${JSON.stringify(computeScores(tree, quiz).totals)}`;
   }
   return base;
 }
@@ -533,27 +590,31 @@ function render(key) {
       };
       break;
     }
-    default: main().innerHTML = lobbyHtml();
+    default:
+      main().innerHTML = lobbyHtml();
+      initLobby();
   }
 }
 
+let overlayKey = '';
 function renderOverlay() {
   const s = st();
   const ov = $('#overlay');
-  if (isJoined() && s.frozenAt) {
-    ov.innerHTML = '<div class="card center"><div class="big">⏸</div><h2>Пауза</h2><p class="muted">Ведущий остановил игру</p></div>';
-    ov.classList.remove('hidden');
-  } else if (isJoined() && s.showBoard) {
-    ov.innerHTML = `<div class="card"><h2 class="center">🏆 Табло</h2>${boardHtml(tree, quiz, computeScores(tree, quiz))}</div>`;
-    ov.classList.remove('hidden');
-  } else {
-    ov.classList.add('hidden');
-  }
+  const mode = !isJoined() ? '' : s.frozenAt ? 'pause' : s.showBoard ? 'board' : '';
+  const scores = mode === 'board' ? computeScores(tree, quiz) : null;
+  const key = mode === 'board' ? `board|${JSON.stringify(scores.totals)}|${teamsSig(tree)}|${JSON.stringify(tree.players || {})}` : mode;
+  if (key === overlayKey) return; // не перерисовываем каждый тик, иначе анимации табло перезапускаются
+  overlayKey = key;
+  let html = '';
+  if (mode === 'pause') html = '<div class="card center"><div class="big">⏸</div><h2>Пауза</h2><p class="muted">Ведущий остановил игру</p></div>';
+  if (mode === 'board') html = `<div class="card board-card"><h2 class="center">🏆 Табло</h2>${boardHtml(tree, quiz, scores, { podium: true })}</div>`;
+  ov.innerHTML = html;
+  ov.classList.toggle('hidden', !html);
 }
 
 function renderTop() {
   $('#me').innerHTML = isJoined()
-    ? `<span class="dot" style="background:${TEAM_COLORS[me.team]}"></span> ${esc(me.name)} · ${esc(teamName(tree, quiz, me.team))}
+    ? `${avatarHtml(tree, me.team, 24)} ${esc(me.name)} · ${esc(teamName(tree, quiz, me.team))}
        <button class="sm" id="leave" title="Выйти">✕</button>`
     : '';
   $('#leave')?.addEventListener('click', async () => {
@@ -572,7 +633,7 @@ function update() {
     screenKey = key;
     render(key);
   }
-  const tk = isJoined() ? `${me.id}|${tree.teams?.[me.team]?.name}` : '';
+  const tk = isJoined() ? `${me.id}|${tree.teams?.[me.team]?.name}|${(tree.teams?.[me.team]?.avatar || '').length}` : '';
   if (tk !== topKey) { topKey = tk; renderTop(); }
   renderOverlay();
   dynamic?.();

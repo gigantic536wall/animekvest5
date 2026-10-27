@@ -1,0 +1,229 @@
+:root {
+  --bg: #0f0c24;
+  --panel: rgba(255, 255, 255, 0.05);
+  --line: rgba(255, 255, 255, 0.12);
+  --text: #f4f1ff;
+  --muted: #a9a3c9;
+  --accent: #a78bfa;
+  --accent2: #f472b6;
+  --ok: #34d399;
+  --bad: #f87171;
+  --warn: #fbbf24;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at 15% 0%, #2a1b5e 0%, var(--bg) 55%) fixed;
+  color: var(--text);
+  font-family: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 17px;
+  line-height: 1.45;
+}
+
+.wrap { max-width: 860px; margin: 0 auto; padding: 16px; }
+.wrap.wide { max-width: 1280px; }
+
+h1, h2, h3 { margin: 0 0 12px; line-height: 1.2; }
+h1 { font-size: 30px; }
+h2 { font-size: 22px; }
+h3 { font-size: 18px; }
+
+.logo {
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 18px;
+  margin-bottom: 14px;
+  backdrop-filter: blur(10px);
+}
+
+.muted { color: var(--muted); }
+.small { font-size: 14px; }
+.center { text-align: center; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.grow { flex: 1; }
+.hidden { display: none !important; }
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  transition: transform 0.1s, background 0.2s;
+}
+button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.15); }
+button:active:not(:disabled) { transform: scale(0.97); }
+button:disabled { opacity: 0.45; cursor: default; }
+button.primary { background: linear-gradient(90deg, #7c3aed, #db2777); border: none; font-weight: 700; }
+button.ok { background: rgba(52, 211, 153, 0.18); border-color: rgba(52, 211, 153, 0.5); }
+button.bad { background: rgba(248, 113, 113, 0.18); border-color: rgba(248, 113, 113, 0.5); }
+button.on { outline: 2px solid var(--accent); background: rgba(167, 139, 250, 0.25); }
+button.sm { padding: 5px 10px; font-size: 14px; border-radius: 9px; }
+
+input, textarea {
+  font: inherit;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text);
+}
+input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+select { font: inherit; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: #1e1b4b; color: var(--text); }
+a { color: var(--accent); }
+label { display: block; font-size: 14px; color: var(--muted); margin: 8px 0 4px; }
+
+/* ---------- Шапка игрока ---------- */
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; }
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 14px; background: rgba(255, 255, 255, 0.08); }
+.badge:empty { display: none; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.status-live { background: var(--ok); }
+.status-poll { background: var(--warn); }
+.status-offline { background: var(--bad); }
+
+.qhead { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
+.timer { font-size: 34px; font-weight: 900; min-width: 64px; text-align: right; font-variant-numeric: tabular-nums; }
+.timer.low { color: var(--bad); }
+.bar { height: 6px; background: rgba(255, 255, 255, 0.1); border-radius: 6px; overflow: hidden; margin-bottom: 14px; }
+.bar > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.2s linear; }
+
+.qtext { font-size: 22px; font-weight: 700; }
+.anime-tag { display: inline-block; padding: 3px 10px; border-radius: 8px; background: rgba(167, 139, 250, 0.2); color: #ddd6fe; font-size: 14px; margin-bottom: 8px; }
+
+/* ---------- Команды ---------- */
+.teams { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.team {
+  border-radius: 14px;
+  padding: 12px;
+  border: 2px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  text-align: left;
+}
+.team.sel { border-color: var(--accent); background: rgba(167, 139, 250, 0.15); }
+.team b { display: block; margin-bottom: 4px; }
+
+/* ---------- Ответ команды ---------- */
+.locked { padding: 14px; border-radius: 14px; background: rgba(52, 211, 153, 0.12); border: 1px solid rgba(52, 211, 153, 0.4); }
+.alert { padding: 12px 14px; border-radius: 12px; background: rgba(251, 191, 36, 0.12); border: 1px solid rgba(251, 191, 36, 0.4); }
+.answer-key { padding: 12px 14px; border-radius: 12px; background: rgba(167, 139, 250, 0.14); border: 1px solid rgba(167, 139, 250, 0.4); }
+
+/* ---------- Раунд 3: варианты ---------- */
+.options { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 10px; }
+.options button { padding: 16px 10px; font-size: 18px; }
+
+/* ---------- Раунд 4: карточки ---------- */
+.cards { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 8px; }
+.cards li {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 12px;
+  background: rgba(255, 255, 255, 0.07); border: 1px solid var(--line);
+  user-select: none; touch-action: none; cursor: grab;
+}
+.cards li.drag { opacity: 0.6; outline: 2px dashed var(--accent); }
+.cards .num { font-weight: 900; color: var(--accent); width: 22px; }
+.cards .letter { font-weight: 800; color: var(--accent2); }
+.cards .arrows { margin-left: auto; display: flex; gap: 4px; }
+
+/* ---------- Раунд 5: верю / не верю ---------- */
+.tf { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tf button { padding: 22px 10px; font-size: 22px; font-weight: 800; }
+
+/* ---------- Раунд 6: мессенджер ---------- */
+.phone { background: #0b1220; border-radius: 22px; padding: 14px; border: 1px solid var(--line); min-height: 220px; }
+.phone .head { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 10px; }
+.msg { max-width: 80%; padding: 9px 13px; border-radius: 16px; margin: 6px 0; animation: pop 0.25s ease-out; }
+.msg .who { font-size: 12px; opacity: 0.7; margin-bottom: 2px; }
+.msg.l { background: #1f2a44; border-bottom-left-radius: 4px; }
+.msg.r { background: #5b21b6; margin-left: auto; border-bottom-right-radius: 4px; }
+.typing { color: var(--muted); font-size: 14px; font-style: italic; padding: 4px 6px; }
+@keyframes pop { from { transform: translateY(6px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---------- Раунд 7: эмблема ---------- */
+.emblem-img { display: block; max-width: 100%; max-height: 340px; margin: 12px auto 0; border-radius: 12px; animation: pop 0.4s ease-out; }
+.wait-pic { text-align: center; padding: 30px 10px; color: var(--muted); border: 1px dashed var(--line); border-radius: 12px; margin-top: 12px; }
+
+/* ---------- Раунд 8: плитки ---------- */
+.tiles { display: flex; flex-wrap: wrap; gap: 6px; min-height: 50px; padding: 8px; border-radius: 12px; background: rgba(0, 0, 0, 0.2); margin-bottom: 8px; }
+.tile {
+  width: 40px; height: 46px; display: grid; place-items: center;
+  font-size: 22px; font-weight: 800; border-radius: 9px;
+  background: linear-gradient(180deg, #4c1d95, #312e81); border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0;
+}
+.tile.space { background: transparent; border: 1px dashed var(--line); width: 26px; }
+.hint { font-size: 20px; font-weight: 800; color: var(--warn); }
+
+/* ---------- Раунд 9: кадр ---------- */
+.frame-wrap { position: relative; text-align: center; }
+.frame-wrap canvas { max-width: 100%; max-height: 52vh; border-radius: 12px; background: #000; }
+.stages { display: flex; gap: 6px; justify-content: center; margin: 8px 0; }
+.stages span { padding: 3px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.08); font-size: 14px; }
+.stages span.cur { background: var(--accent); color: #111; font-weight: 800; }
+
+/* ---------- Финал ---------- */
+.bets { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 12px 0; }
+.bets button { width: 62px; height: 62px; font-size: 26px; font-weight: 900; }
+.topic { font-size: 30px; font-weight: 900; text-align: center; margin: 14px 0; }
+
+/* ---------- Табло ---------- */
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 14px; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.board td:first-child { width: 36px; font-weight: 900; color: var(--accent); }
+.total { font-weight: 900; font-size: 20px; }
+
+.overlay {
+  position: fixed; inset: 0; background: rgba(8, 6, 20, 0.88);
+  display: grid; place-items: center; z-index: 50; padding: 16px;
+}
+.overlay .card { width: min(560px, 100%); }
+.big { font-size: 46px; font-weight: 900; }
+.toast {
+  position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 60;
+  background: #1e1b4b; border: 1px solid var(--accent); border-radius: 12px;
+  padding: 10px 16px; max-width: calc(100% - 32px); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* ---------- Админка ---------- */
+.admin-grid { display: grid; grid-template-columns: 340px 1fr; gap: 14px; align-items: start; }
+.rounds-list { display: grid; gap: 6px; }
+.rounds-list button { text-align: left; display: flex; justify-content: space-between; }
+.rounds-list button.cur { outline: 2px solid var(--accent2); }
+.check td { font-size: 15px; }
+.pts { font-weight: 900; }
+.pts.pos { color: var(--ok); }
+.pts.neg { color: var(--bad); }
+.tag { display: inline-block; font-size: 12px; padding: 2px 7px; border-radius: 6px; background: rgba(255, 255, 255, 0.1); margin-left: 4px; }
+.qnav { display: flex; gap: 4px; flex-wrap: wrap; }
+.qnav button { min-width: 38px; padding: 6px 8px; }
+
+@media (max-width: 900px) {
+  .admin-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  body { font-size: 16px; }
+  .qtext { font-size: 19px; }
+  .timer { font-size: 28px; }
+  .options { grid-template-columns: 1fr; }
+  .tile { width: 34px; height: 40px; font-size: 19px; }
+  .big { font-size: 36px; }
+  .topbar h1 { font-size: 22px; }
+}

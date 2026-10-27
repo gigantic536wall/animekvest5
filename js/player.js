@@ -97,13 +97,17 @@ function lobbyHtml() {
       <p class="small muted">Отвечает команда целиком: принимается первый ответ любого из вас, после этого поле блокируется у всей команды.</p>
     </div>
     <div class="card">
-      <h3>Аватарка команды</h3>
+      <h3>Название и аватарка команды</h3>
+      <div class="row" style="margin-bottom:14px">
+        <input id="teamName" class="grow" maxlength="24" placeholder="${esc(quiz.teams[me.team])}" value="${esc(local.teamDraft ?? teamName(tree, quiz, me.team))}" style="width:auto">
+        <button class="primary" id="saveName">Сохранить</button>
+      </div>
       <div class="ava-edit">
         ${avatarHtml(tree, me.team, 84)}
         <div>
           <label class="btn-file"><input type="file" id="avaFile" accept="image/*" hidden><span class="primary-btn">📷 ${hasAva ? 'Сменить' : 'Загрузить'} картинку</span></label>
           ${hasAva ? '<button class="sm" id="avaDel">Убрать</button>' : ''}
-          <div class="small muted" style="margin-top:6px">Любой из команды может поставить картинку — её увидят все в табло.</div>
+          <div class="small muted" style="margin-top:6px">Название и картинку может поменять любой из команды — их увидят все в табло.</div>
         </div>
       </div>
     </div>
@@ -111,6 +115,20 @@ function lobbyHtml() {
 }
 
 function initLobby() {
+  // Черновик названия переживает перерисовку лобби (например, когда заходит напарник).
+  $('#teamName')?.addEventListener('input', (e) => (local.teamDraft = e.target.value));
+  const saveName = async () => {
+    const name = ($('#teamName').value || '').trim().slice(0, 24);
+    try {
+      await api.put(`teams/${me.team}/name`, name || null);
+      local.teamDraft = undefined;
+      toast(name ? 'Название сохранено' : 'Вернули стандартное название');
+    } catch (err) {
+      toast('Не удалось сохранить название');
+    }
+  };
+  $('#saveName')?.addEventListener('click', saveName);
+  $('#teamName')?.addEventListener('keydown', (e) => e.key === 'Enter' && saveName());
   $('#avaFile')?.addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;

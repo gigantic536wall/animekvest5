@@ -1,41 +1,57 @@
-# Аниме квест 5.2
+# 🎌 Anime Quest 5: live team quiz with zero build step
 
-Командная онлайн-викторина по аниме: 10 заданий, до 30 игроков, 10 команд по 3 человека.
+A real-time multiplayer quiz for up to **30 players in 10 teams**. The host runs 10 themed rounds from a control panel, players answer from their phones, and everyone's timer stays in sync.
 
-- **Игроки:** https://gigantic536wall.github.io/animekvest5/
-- **Ведущий:** https://gigantic536wall.github.io/animekvest5/admin.html (пароль `admin123`)
+Written in plain JavaScript with no frameworks and no build tools: the whole app is a static site served straight from GitHub Pages, with Firebase Realtime Database as the backend.
 
-## Задания
+**[▶ Play (player screen)](https://gigantic536wall.github.io/animekvest5/)** · [Host panel](https://gigantic536wall.github.io/animekvest5/admin.html) · [Русская версия](README.ru.md)
 
-| № | Задание | Вопросов | Время | Баллы | Проверка |
-|---|---|---|---|---|---|
-| 1 | Найди ошибку | 10 | 40 с | +2 | админ |
-| 2 | Кто нанёс последний удар? | 10 | 20 с | +2 | админ |
-| 3 | Лишний | 10 | 30 с | +1 за выбор, +1 за причину | выбор — авто, причина — админ |
-| 4 | Расставь по порядку | 8 | 40 с | +3 за полностью верный порядок | авто |
-| 5 | Верю / не верю | 10 | 15 с | +1 / −1, пропуск 0 | авто |
-| 6 | Переписка | 10 | 30 с | +2 за аниме, +1 за персонажей | админ |
-| 7 | Знак отличия | 10 | 25 с | +2 организация, +1 участник, +1 до картинки | админ |
-| 8 | Анаграммы | 10 | 40 с | +3 имя (+2 после подсказки), +1 аниме | админ |
-| 9 | Знаменитый кадр | 10 | 4 этапа по 8 с | +4 / +3 / +2 / +1, ошибка −1 | админ |
-| 10 | Финал «Ва-банк» | 5 | 15 с ставка + 45 с | ±ставка | админ |
+> Looking for the bigger version with React, TypeScript, Firebase Auth and tested security rules? See **[Anime Quest 4](https://github.com/gigantic536wall/anime-quest)**.
 
-## Как провести игру
+<!-- TODO: screenshots / GIF: player lobby, question, scoreboard, host panel -->
 
-1. Ведущий открывает `admin.html`, игроки — главную страницу, вводят ник и выбирают команду.
-2. Ведущий нажимает задание слева — у игроков открываются его правила. Кнопка «Начать раунд» запускает первый вопрос у всех одновременно.
-3. Дальше игра идёт сама: вопрос → 10 с паузы (можно «Пропустить паузу») → следующий вопрос. «Пауза» замораживает таймер в любой момент.
-4. После последнего вопроса раунд стоит на паузе, пока ведущий не нажмёт что-нибудь: «Показать ответы раунда» (игроки листают правильные ответы вместе с ведущим) или «К заданию N».
-5. Ответы проверяются в панели «Проверка ответов»: команда — ответ — на каком этапе ответила — кнопки ✓/✗. Задания 4 и 5 и выбор в задании 3 считаются автоматически.
-6. «Табло у игроков» показывает всем текущие очки. В блоке «Команды и очки» можно переименовать команды, удалить игрока и вручную поправить очки (±1).
+## Features
 
-Командный ответ: принимается первый ответ любого игрока команды, после этого поле блокируется у всей команды и показывается «Ваша команда ответила: …». Два одновременных ответа одной команды больше не затирают друг друга — база принимает только первый.
+- **10 round types, 93 questions**: spot the mistake, odd one out, put in order, true/false, anagrams, a "famous frame" revealed in 4 stages, a final round with bets, and more
+- **Server-synced timers**: every timer is calculated from Firebase server time, so all players see the same countdown regardless of their device clock
+- **Automatic game flow**: question → pause → next question, with pause, skip and freeze controls for the host
+- **One answer per team**: the database accepts only the first answer from a team (conditional write with ETag), so simultaneous answers never overwrite each other
+- **Overflow protection**: optimistic transactions make sure a team never gets more than 3 players, even when people join at the same moment
+- **Mixed checking**: some rounds are scored automatically, the rest go to a review panel with ✓/✗ buttons
+- **Scoreboard with podium**, team avatars, color-coded answers, team renaming in the lobby
+- **Answer reveal mode**: after a round, the host and players flip through the correct answers together
 
-## Устройство
+## Tech stack
 
-- `index.html` — экран игрока, `admin.html` — ведущий, `questions.json` — все вопросы, `media/` — картинки заданий 7 и 9.
-- `js/common.js` — база, синхронизация времени, подсчёт очков; `js/player.js`, `js/admin.js` — экраны.
-- Состояние игры и ответы хранятся в Firebase Realtime Database (`anime-database-7d48e`, ветка `kvest5/`). Таймер у всех считается от серверного времени Firebase, поэтому идёт одинаково.
-- Сайт статический, GitHub Pages раздаёт его из ветки `main` без сборки.
+- **Frontend:** HTML, CSS, vanilla JavaScript
+- **Backend:** Firebase Realtime Database through its REST API and Server-Sent Events (no SDK)
+- **Hosting:** GitHub Pages
 
-Чтобы поменять вопросы, правьте `questions.json`. Чтобы сменить пароль ведущего, замените `ADMIN_HASH` в `js/admin.js` на SHA-256 нового пароля.
+## How it works
+
+```
+index.html      player screen
+admin.html      host control panel
+questions.json  all rounds and questions
+media/          images for rounds 7 and 9
+js/common.js    database client (REST + EventSource), server time sync, scoring
+js/player.js    player screen logic
+js/admin.js     host logic and game engine
+css/style.css   styles
+```
+
+The host's browser drives the game: it moves the shared state (`phase`, `round`, `q`, `start`) forward on a timer, and every client renders from that state in real time.
+
+## Run locally
+
+No install needed. Serve the folder with any static server:
+
+```bash
+npx serve .
+```
+
+To use your own database, change the database URL in `js/common.js`. To change the host password, replace `ADMIN_HASH` in `js/admin.js` with the SHA-256 hash of the new password.
+
+## Known limitations
+
+This version was built for quick games with friends, so it trades security for simplicity: the database is open, the host password is checked in the browser, and the answers are in the public `questions.json`. All of these are fixed in [Anime Quest 4](https://github.com/gigantic536wall/anime-quest) with Firebase Authentication, security rules and a private answers branch.
